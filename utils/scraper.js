@@ -24,7 +24,8 @@ const scraper = async (regNo) => {
     browser = await chromium.launch(launchOptions);
     const context = await browser.newContext({ ignoreHTTPSErrors: true });
     const page = await context.newPage();
-    await page.setDefaultTimeout(10000);
+    await page.setDefaultTimeout(60000); // Increased to 60 seconds
+    console.log("Navigating to URL...");
     await page.route("**/*", (route) => {
       const req = route.request();
       const url = req.url();
@@ -67,6 +68,8 @@ const scraper = async (regNo) => {
       throw { type: "error", message: "Unable to reach university website" };
     }
 
+    // console.log("Waiting for input selector #REG...");
+    await page.waitForSelector("#REG", { state: 'visible', timeout: 30000 });
     await page.fill("#REG", regNo);
     await page.click("input[type='submit'][value='Result']");
     await page.waitForLoadState("domcontentloaded");
