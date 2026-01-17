@@ -8,9 +8,10 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "app.js",
-  "scripts": {
-    "start": "node app.js"
-  },
+ "scripts": {
+  "build": "npm install && npx playwright install chromium",
+  "start": "node app.js"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",

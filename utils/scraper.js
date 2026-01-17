@@ -152,3 +152,4 @@ const scraper = async (regNo) => {
 };
 
 module.exports = scraper;
+
