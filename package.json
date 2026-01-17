@@ -9,7 +9,7 @@
   "version": "1.0.0",
   "main": "app.js",
  "scripts": {
-  "build": "npm install && npx playwright install chromium",
+ "postinstall": "npx playwright install-deps && npx playwright install chromium",
   "start": "node app.js"
 },
   "keywords": [],

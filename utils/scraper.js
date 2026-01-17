@@ -4,7 +4,24 @@ const { chromium } = require("playwright");
 const scraper = async (regNo) => {
   let browser;
   try {
-    browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+    const launchOptions = {
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--disable-gpu",
+        "--window-size=1920x1080"
+      ]
+    };
+
+    // Only use executablePath if explicitly provided in env
+    if (process.env.CHROME_PATH) {
+      launchOptions.executablePath = process.env.CHROME_PATH;
+    }
+
+    browser = await chromium.launch(launchOptions);
     const context = await browser.newContext({ ignoreHTTPSErrors: true });
     const page = await context.newPage();
     await page.setDefaultTimeout(10000);
@@ -152,4 +169,3 @@ const scraper = async (regNo) => {
 };
 
 module.exports = scraper;
-
