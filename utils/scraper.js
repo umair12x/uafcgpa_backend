@@ -1,10 +1,10 @@
 require("dotenv").config();
-const { firefox } = require("playwright");
+const { chromium } = require("playwright");
 
 const scraper = async (regNo) => {
   let browser;
   try {
-    browser = await firefox.launch({ headless: true, args: ["--no-sandbox"] });
+    browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
     const context = await browser.newContext({ ignoreHTTPSErrors: true });
     const page = await context.newPage();
     await page.setDefaultTimeout(10000);
