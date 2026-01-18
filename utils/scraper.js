@@ -25,7 +25,6 @@ const scraper = async (regNo) => {
     const context = await browser.newContext({ ignoreHTTPSErrors: true });
     const page = await context.newPage();
     await page.setDefaultTimeout(60000); // Increased to 60 seconds
-    console.log("Navigating to URL...");
     await page.route("**/*", (route) => {
       const req = route.request();
       const url = req.url();
@@ -159,6 +158,7 @@ const scraper = async (regNo) => {
       result,
     };
   } catch (error) {
+    // console.error("Scraper Error Details:", error);
     if (error.type && error.message) return { success: false, ...error };
     return {
       success: false,
