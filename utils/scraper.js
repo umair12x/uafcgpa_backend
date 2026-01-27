@@ -16,7 +16,6 @@ const scraper = async (regNo) => {
       ]
     };
 
-    // Only use executablePath if explicitly provided in env
     if (process.env.CHROME_PATH) {
       launchOptions.executablePath = process.env.CHROME_PATH;
     }
@@ -24,7 +23,8 @@ const scraper = async (regNo) => {
     browser = await chromium.launch(launchOptions);
     const context = await browser.newContext({ ignoreHTTPSErrors: true });
     const page = await context.newPage();
-    await page.setDefaultTimeout(60000); // Increased to 60 seconds
+    await page.setDefaultTimeout(30000); 
+
     await page.route("**/*", (route) => {
       const req = route.request();
       const url = req.url();
@@ -50,7 +50,6 @@ const scraper = async (regNo) => {
       ) {
         return route.abort();
       }
-
       route.continue();
     });
 
@@ -58,16 +57,12 @@ const scraper = async (regNo) => {
       await page.goto(process.env.LOGIN_URL, { waitUntil: "domcontentloaded" });
     } catch (err) {
       if (err.message.includes("ERR_CERT"))
-        throw {
-          type: "error",
-          message: "SSL issue detected, website certificate invalid",
-        };
+        throw { type: "error", message: "SSL issue detected, website certificate invalid" };
       if (err.message.includes("Timeout"))
         throw { type: "warning", message: "Website took too long to respond" };
       throw { type: "error", message: "Unable to reach university website" };
     }
 
-    // console.log("Waiting for input selector #REG...");
     await page.waitForSelector("#REG", { state: 'visible', timeout: 30000 });
     await page.fill("#REG", regNo);
     await page.click("input[type='submit'][value='Result']");
@@ -75,26 +70,18 @@ const scraper = async (regNo) => {
 
     const hasTable = await page.$(".table.tab-content");
     if (!hasTable) {
-      throw {
-        type: "error",
-        message: "No result found for this registration number",
-      };
+      throw { type: "error", message: "No result found for this registration number" };
     }
 
     const rawInfo = await page.textContent(".table.tab-content");
     const cleanedInfo = rawInfo.replace(/\s+/g, " ").trim();
 
-    const match = cleanedInfo.match(
-      /Registration #\s*([^\s]+).*?Student Full Name\s*(.*)/i
-    );
+    const match = cleanedInfo.match(/Registration #\s*([^\s]+).*?Student Full Name\s*(.*)/i);
     const registrationNo = match ? match[1]?.trim() : "";
     const studentName = match ? match[2]?.trim() : "";
 
     if (!studentName) {
-      throw {
-        type: "warning",
-        message: "Invalid registration number, student not found",
-      };
+      throw { type: "warning", message: "Invalid registration number, student not found" };
     }
 
     const { Cgpa, result } = await page.$$eval(
@@ -133,12 +120,33 @@ const scraper = async (regNo) => {
           semMap[c.sem].push(c);
         });
 
-        const result = Object.entries(semMap).map(([sem, subs]) => {
+        // --- CUSTOM SORTING LOGIC START ---
+        const sortedEntries = Object.entries(semMap).sort(([semA], [semB]) => {
+          // Extract the first 4-digit year found in the string
+          const yearA = parseInt(semA.match(/\d{4}/)?.[0] || 0);
+          const yearB = parseInt(semB.match(/\d{4}/)?.[0] || 0);
+
+          if (yearA !== yearB) return yearA - yearB;
+
+          // Define weights for semesters
+          const getWeight = (s) => {
+            const name = s.toLowerCase();
+            if (name.includes("winter")) return 0;
+            if (name.includes("spring")) return 1;
+            if (name.includes("summer")) return 2;
+            return 3; // Fallback
+          };
+
+          return getWeight(semA) - getWeight(semB);
+        });
+
+        const result = sortedEntries.map(([sem, subs]) => {
           const totalQP = subs.reduce((a, b) => a + b.qp, 0);
           const totalCH = subs.reduce((a, b) => a + b.ch, 0);
           const gpa = totalCH ? Number((totalQP / totalCH).toFixed(3)) : 0;
           return { semester: sem, Gpa: gpa, subjects: subs };
         });
+        // --- CUSTOM SORTING LOGIC END ---
 
         const totalQP = Object.values(allCourses).reduce((a, c) => a + c.qp, 0);
         const totalCH = Object.values(allCourses).reduce((a, c) => a + c.ch, 0);
@@ -158,7 +166,6 @@ const scraper = async (regNo) => {
       result,
     };
   } catch (error) {
-    // console.error("Scraper Error Details:", error);
     if (error.type && error.message) return { success: false, ...error };
     return {
       success: false,
